@@ -1,41 +1,29 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"azfn/pkg/routes"
+
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 )
 
-func main() {
-	router := gin.Default()
-
-	router.GET("api/service", handlerRoot)
-	router.GET("api/service/ping", handlerPing)
-
-	portInfo := GetApiPort()
-	router.Run(portInfo)
-	log.Println("API is up & running - " + portInfo)
-}
-
 func GetApiPort() string {
-	port := ":8080"
-	if val, ok := os.LookupEnv("FUNCTIONS_CUSTOMHANDLER_PORT"); ok {
-		port = ":" + val
+	port := os.Getenv("FUNCTIONS_CUSTOMHANDLER_PORT")
+	if port == "" {
+		port = "8080"
 	}
 	return port
 }
 
-func handlerRoot(c *gin.Context) {
-	log.Println("Invoke ROOT")
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Okay",
-	})
-}
+func main() {
+	customHandlerPort := GetApiPort()
 
-func handlerPing(c *gin.Context) {
-	log.Println("Invoke PING")
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Pong!",
-	})
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", routes.HandleRoot)
+	mux.HandleFunc("/service-blobtrigger", routes.HandleBlobTrigger)
+
+	fmt.Println("Go server Listening...on FUNCTIONS_CUSTOMHANDLER_PORT:", customHandlerPort)
+	log.Fatal(http.ListenAndServe(":"+customHandlerPort, mux))
 }
